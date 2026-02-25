@@ -1,0 +1,56 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16-bookworm
+        env:
+          POSTGRES_DB: pawsHome
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: adminpostgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Test backend
+        working-directory: backend
+        run: mvn -ntp -B verify
+
+  frontend:
+    name: Frontend - build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+          
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+        
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+        
+      - name: Build
+        working-directory: frontend
+        run: npm run build
