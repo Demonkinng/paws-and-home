@@ -29,6 +29,11 @@ jobs:
           cache: maven
       - name: Test backend
         working-directory: backend
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/pawsHome
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: adminpostgres
+          SPRING_JPA_HIBERNATE_DDL_AUTO: update
         run: mvn -ntp -B verify
 
   frontend:
