@@ -1,0 +1,22 @@
+services:
+  db:
+    container_name: postgres-pawsHome
+    image: postgres:16-bookworm
+    restart: always
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - paws-pg-data:/var/lib/postgresql/data
+    networks:
+      - paws-network
+
+networks:
+  paws-network:
+    driver: bridge
+
+volumes:
+  paws-pg-data:
