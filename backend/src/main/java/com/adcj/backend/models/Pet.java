@@ -15,7 +15,7 @@ import lombok.*;
 public class Pet {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    private int id;
+    private Integer id;
 
     @Column(nullable = false)
     private String name;
