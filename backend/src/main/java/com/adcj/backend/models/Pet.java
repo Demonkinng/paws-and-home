@@ -31,7 +31,7 @@ public class Pet {
     private Gender gender;
 
     @Column(columnDefinition = "TEXT")
-    private String Description;
+    private String description;
 
     @Column(name = "image_id", nullable = false, unique = true)
     private String imageId;
