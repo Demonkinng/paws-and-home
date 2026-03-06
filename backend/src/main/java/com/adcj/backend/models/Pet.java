@@ -6,12 +6,15 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "pets")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Table(
+        name = "pets",
+        uniqueConstraints = {@UniqueConstraint(name = "pets_image_id_unique", columnNames = "image_id")}
+)
 public class Pet {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -24,7 +27,7 @@ public class Pet {
     private String breed;
 
     @Column(nullable = false)
-    private int age;
+    private Integer age;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
@@ -33,7 +36,7 @@ public class Pet {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "image_id", nullable = false, unique = true)
+    @Column(name = "image_id", nullable = false)
     private String imageId;
 
     @Enumerated(EnumType.STRING)
