@@ -1,46 +1,93 @@
 package com.adcj.backend.services;
 
+import com.adcj.backend.exceptions.ResourceNotFoundException;
 import com.adcj.backend.models.Pet;
+import com.adcj.backend.dto.PetDTO;
+import com.adcj.backend.mappers.PetDTOMapper;
+import com.adcj.backend.dto.PetCreateRequest;
 import com.adcj.backend.models.enums.AdoptionStatus;
+import com.adcj.backend.models.enums.Gender;
 import com.adcj.backend.repositories.PetRepository;
+import com.adcj.backend.specifications.PetSpecification;
+import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @Service
 public class PetService {
     private final PetRepository petRepository;
+    private final PetDTOMapper petDTOMapper;
     private final StorageService storageService;
 
-    public PetService(PetRepository petRepository, StorageService storageService) {
+    public PetService(PetRepository petRepository, StorageService storageService, PetDTOMapper petDTOMapper) {
         this.petRepository = petRepository;
+        this.petDTOMapper = petDTOMapper;
         this.storageService = storageService;
     }
 
-    /**
-     * Get all pets with status AVAILABLE
-     *
-     * @return List of available pets
-     */
-    public List<Pet> getAllAvailabePets() {
-        return petRepository.findByStatus(AdoptionStatus.AVAILABLE);
+    private Pet getPet(Integer petId) {
+        return petRepository
+                .findById(petId)
+                .orElseThrow(() -> new ResourceNotFoundException("No found pet with id: " + petId));
     }
 
     /**
-     * Get pet by id
+     * Get pets with optional filters.
      *
-     * @param petId the id of the pet
-     * @return the pet with the given id
+     * @param status   adoption status filter.
+     * @param gender   gender filter.
+     * @param breed    breed filter (partial match).
+     * @param search   search term to match against name, breed, or description.
+     * @param pageable pagination information.
+     * @return a page of PetDTOs matching the filters.
      */
-    public Pet getPetById(Integer petId) {
-        return petRepository.findById(petId).orElseThrow(() -> new RuntimeException("No found pet with id: " + petId));
+    public Page<PetDTO> getPets(AdoptionStatus status, Gender gender, String breed, String search, Pageable pageable) {
+        Specification<Pet> specification = Specification
+                .where(PetSpecification.hasStatus(status))
+                .and(PetSpecification.hasGender(gender))
+                .and(PetSpecification.breedContains(breed))
+                .and(PetSpecification.searchByText(search));
+
+        return petRepository.findAll(specification, pageable).map(petDTOMapper);
     }
 
-    public void addPet(Pet pet, MultipartFile image) {
+    public PetDTO getPetById(Integer petId) {
+        Pet pet = getPet(petId);
+        return petDTOMapper.apply(pet);
+    }
+
+    @Transactional
+    public PetDTO addPet(PetCreateRequest request, MultipartFile image) {
         String imageId = storageService.store(image);
+
+        Pet pet = new Pet();
+        pet.setName(request.name());
+        pet.setBreed(request.breed());
+        pet.setAge(request.age());
+        pet.setGender(request.gender());
+        pet.setDescription(request.description());
         pet.setImageId(imageId);
         pet.setStatus(AdoptionStatus.AVAILABLE);
-        petRepository.save(pet);
+
+        return petDTOMapper.apply(petRepository.save(pet));
+    }
+
+    //TODO: implement update logic
+
+    public Resource getPetImage(Integer petId) {
+        Pet pet = getPet(petId);
+        return storageService.loadAsResource(pet.getImageId());
+    }
+
+    @Transactional
+    public void deletePet(Integer petId) {
+        Pet pet = getPet(petId);
+        // delete image before deleting pet
+        storageService.delete(pet.getImageId());
+        petRepository.delete(pet);
     }
 }
